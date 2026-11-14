@@ -798,23 +798,50 @@
             }
 
             // Collectibles & Sky Props Interaction
+              // Collectibles & Sky Props Interaction
             for (const item of collectibles) {
                 if (item.collected) continue;
                 if (item.cooldown && item.cooldown > 0) item.cooldown -= dt;
 
                 const bobY = item.y + Math.sin(frameTime * 3 + item.bobOffset) * 6;
+                
+                // Star Magnet upgrade pull effect
+                if (item.type === 'star' && upgrades.magnet > 1) {
+                    const magnetRange = 80 + upgrades.magnet * 35;
+                    const dxm = player.x - item.x;
+                    const dym = player.y - bobY;
+                    const distm = Math.hypot(dxm, dym);
+                    if (distm < magnetRange) {
+                        item.x += (dxm / distm) * 320 * dt;
+                        item.y += (dym / distm) * 320 * dt;
+                    }
+                }
+
                 const dx = player.x - item.x;
                 const dy = player.y - bobY;
                 const dist = Math.hypot(dx, dy);
 
                 if (item.type === 'star' && dist < player.radius + item.radius + 8) {
                     item.collected = true;
+                    totalLifetimeStars += 1;
+                    setSavedStars(totalLifetimeStars);
                     const pts = 30 * combo;
                     score += pts;
                     playStarSound();
                     spawnBurst(item.x, bobY, '#fde047', 12, 0.9);
-                    addFloatingText(item.x, bobY - 12, `+${pts}`, '#fde047', 18);
+                    addFloatingText(item.x, bobY - 12, `+${pts} ⭐`, '#fde047', 18);
                 } else if (item.type === 'balloon' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    player.vy = Math.min(player.vy, -250) - 520;
+                    player.canFlutter = true;
+                    player.squashX = 0.8;
+                    player.squashY = 1.24;
+                    const pts = 60 * combo;
+                    score += pts;
+                    playBalloonSound();
+                    spawnBurst(item.x, bobY, item.color, 16, 1.1);
+                    addFloatingText(item.x, bobY - 15, `BALLOON LIFT! +${pts}`, '#f472b6', 19);
+                } else if (item.type === 'bounceCloud' && (!item.cooldown || item.cooldown <= 0)) {
                     item.collected = true;
                     player.vy = Math.min(player.vy, -250) - 520;
                     player.canFlutter = true;
