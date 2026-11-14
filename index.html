@@ -577,6 +577,48 @@
 
             updateHUD();
         }
+ function resetGame() {
+            resizeCanvas();
+            score = 0;
+            altitude = 0;
+            maxAltitude = 0;
+            combo = 1;
+            cameraY = 0;
+            screenShake = 0;
+
+            const widthBonus = (upgrades.width - 1) * 16;
+            trampoline.width = Math.min(320, Math.max(180, width * 0.25 + widthBonus));
+            trampoline.sweetSpotWidth = 68 + (upgrades.sweet - 1) * 14;
+            trampoline.x = width / 2;
+            trampoline.y = groundY - 26;
+            trampoline.dip = 0;
+            trampoline.dipVelocity = 0;
+
+            player.x = width / 2;
+            player.y = trampoline.y - 130;
+            player.vx = 0;
+            player.vy = 0;
+            player.rotation = 0;
+            player.spinSpeed = 0;
+            player.squashX = 1;
+            player.squashY = 1;
+            player.canFlutter = true;
+            player.scarfPoints = Array.from({ length: 6 }, (_, i) => ({
+                x: player.x - i * 6,
+                y: player.y + 8
+            }));
+
+            collectibles = [];
+            floatingTexts = [];
+            particles = [];
+            initScenery();
+            highestGeneratedY = groundY - 240;
+            spawnSkyBand(highestGeneratedY, highestGeneratedY - 2600);
+            highestGeneratedY -= 2600;
+
+            updateHUD();
+            updateShopUI();
+        }
 
         function startGame() {
             ensureAudio();
@@ -584,8 +626,9 @@
             gameState = 'PLAYING';
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
-            // Initial gentle bounce boost
-            player.vy = -780;
+            // Initial bounce boost influenced by height upgrade
+            const heightBonus = (upgrades.height - 1) * 45;
+            player.vy = -780 - heightBonus;
             trampoline.dip = 22;
             playBounceSound(true, 1);
             spawnBurst(trampoline.x, trampoline.y, '#fbbf24', 18, 1.1);
@@ -593,6 +636,7 @@
 
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', startGame);
+
 
         function updateHUD() {
             scoreDisplay.textContent = Math.floor(score).toLocaleString();
