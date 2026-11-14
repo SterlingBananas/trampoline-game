@@ -1,0 +1,259 @@
+<!-- ... existing code ... -->
+        <!-- Center Start / Game Over Menus -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <!-- Start Screen -->
+            <div id="startScreen" class="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 sm:p-8 rounded-3xl shadow-2xl text-center max-w-lg w-11/12 pointer-events-auto animate-pulse-slow">
+                <div class="text-5xl mb-2 drop-shadow-lg">🤸‍♂️</div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1 bg-gradient-to-r from-amber-300 via-orange-300 to-rose-400 bg-clip-text text-transparent">TRAMPOLINE BOUNCE</h1>
+                <p class="text-slate-200 text-xs sm:text-sm mb-4 leading-relaxed">Upgrade your gear in the shop to bounce higher and collect more stars!</p>
+                
+                <!-- Upgrade Shop Panel -->
+                <div class="bg-slate-800/80 rounded-2xl p-3 mb-4 border border-white/10 text-left">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">🛠️ Trampoline Workshop</span>
+                        <span class="text-xs font-bold text-amber-400">Stars: ⭐ <span id="shopStarsDisplay">0</span></span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <button id="upgradeHeightBtn" onclick="buyUpgrade('height')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Spring Power</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlHeight">1</span> (+Bounce)</p></div>
+                            <span id="costHeight" class="text-amber-300 font-bold">100 ⭐</span>
+                        </button>
+                        <button id="upgradeWidthBtn" onclick="buyUpgrade('width')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Wide Mat</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlWidth">1</span> (+Width)</p></div>
+                            <span id="costWidth" class="text-amber-300 font-bold">75 ⭐</span>
+                        </button>
+                        <button id="upgradeSweetBtn" onclick="buyUpgrade('sweet')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Sweet Spot</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlSweet">1</span> (+Size)</p></div>
+                            <span id="costSweet" class="text-amber-300 font-bold">120 ⭐</span>
+                        </button>
+                        <button id="upgradeMagnetBtn" onclick="buyUpgrade('magnet')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Star Magnet</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlMagnet">1</span> (Pull)</p></div>
+                            <span id="costMagnet" class="text-amber-300 font-bold">150 ⭐</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button id="startBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-bold text-base rounded-2xl shadow-lg shadow-rose-500/30 transform active:scale-95 transition-all cursor-pointer">
+                    START BOUNCING! 🚀
+                </button>
+                <div class="mt-3 space-y-0.5 text-[11px] text-slate-300/90">
+                    <div><span class="font-bold text-amber-300">Steer:</span> Mouse / Touch / A-D</div>
+                    <div><span class="font-bold text-sky-300">Flip Boost:</span> Spacebar / Double-Tap</div>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+<!-- ... existing code ... -->
+        // Safe Storage Helper
+        function getSavedBest() {
+            try {
+                return parseInt(localStorage.getItem('trampoline_best_score') || '0', 10) || 0;
+            } catch (e) {
+                return 0;
+            }
+        }
+        function setSavedBest(val) {
+            try {
+                localStorage.setItem('trampoline_best_score', String(val));
+            } catch (e) {}
+        }
+
+        // Persistent Shop & Upgrades
+        let totalLifetimeStars = getSavedStars();
+        let upgrades = {
+            height: getSavedUpgrade('height', 1),
+            width: getSavedUpgrade('width', 1),
+            sweet: getSavedUpgrade('sweet', 1),
+            magnet: getSavedUpgrade('magnet', 1)
+        };
+
+        function getSavedStars() {
+            try {
+                return parseInt(localStorage.getItem('trampoline_total_stars') || '0', 10) || 0;
+            } catch (e) { return 0; }
+        }
+        function setSavedStars(val) {
+            try { localStorage.setItem('trampoline_total_stars', String(val)); } catch (e) {}
+        }
+        function getSavedUpgrade(key, def) {
+            try {
+                return parseInt(localStorage.getItem('trampoline_up_' + key) || String(def), 10) || def;
+            } catch (e) { return def; }
+        }
+        function setSavedUpgrade(key, val) {
+            try { localStorage.setItem('trampoline_up_' + key, String(val)); } catch (e) {}
+        }
+
+        function getUpgradeCost(type) {
+            const lvl = upgrades[type];
+            if (type === 'height') return lvl * 80;
+            if (type === 'width') return lvl * 60;
+            if (type === 'sweet') return lvl * 100;
+            if (type === 'magnet') return lvl * 120;
+            return 100;
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopStarsDisplay').textContent = Math.floor(totalLifetimeStars);
+            document.getElementById('lvlHeight').textContent = upgrades.height;
+            document.getElementById('costHeight').textContent = getUpgradeCost('height') + ' ⭐';
+            document.getElementById('lvlWidth').textContent = upgrades.width;
+            document.getElementById('costWidth').textContent = getUpgradeCost('width') + ' ⭐';
+            document.getElementById('lvlSweet').textContent = upgrades.sweet;
+            document.getElementById('costSweet').textContent = getUpgradeCost('sweet') + ' ⭐';
+            document.getElementById('lvlMagnet').textContent = upgrades.magnet;
+            document.getElementById('costMagnet').textContent = getUpgradeCost('magnet') + ' ⭐';
+        }
+
+        window.buyUpgrade = function(type) {
+            const cost = getUpgradeCost(type);
+            if (totalLifetimeStars >= cost) {
+                totalLifetimeStars -= cost;
+                upgrades[type]++;
+                setSavedStars(totalLifetimeStars);
+                setSavedUpgrade(type, upgrades[type]);
+                updateShopUI();
+                playStarSound();
+            } else {
+                playTone(180, 120, 0.2, 'sawtooth', 0.1);
+            }
+        };
+
+        // --- Input State & Listeners ---
+<!-- ... existing code ... -->
+        function resetGame() {
+            resizeCanvas();
+            score = 0;
+            altitude = 0;
+            maxAltitude = 0;
+            combo = 1;
+            cameraY = 0;
+            screenShake = 0;
+
+            const widthBonus = (upgrades.width - 1) * 16;
+            trampoline.width = Math.min(320, Math.max(180, width * 0.25 + widthBonus));
+            trampoline.sweetSpotWidth = 68 + (upgrades.sweet - 1) * 14;
+            trampoline.x = width / 2;
+            trampoline.y = groundY - 26;
+            trampoline.dip = 0;
+            trampoline.dipVelocity = 0;
+
+            player.x = width / 2;
+            player.y = trampoline.y - 130;
+            player.vx = 0;
+            player.vy = 0;
+            player.rotation = 0;
+            player.spinSpeed = 0;
+            player.squashX = 1;
+            player.squashY = 1;
+            player.canFlutter = true;
+            player.scarfPoints = Array.from({ length: 6 }, (_, i) => ({
+                x: player.x - i * 6,
+                y: player.y + 8
+            }));
+
+            collectibles = [];
+            floatingTexts = [];
+            particles = [];
+            initScenery();
+            highestGeneratedY = groundY - 240;
+            spawnSkyBand(highestGeneratedY, highestGeneratedY - 2600);
+            highestGeneratedY -= 2600;
+
+            updateHUD();
+            updateShopUI();
+        }
+
+        function startGame() {
+            ensureAudio();
+            resetGame();
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            // Initial bounce boost influenced by height upgrade
+            const heightBonus = (upgrades.height - 1) * 45;
+            player.vy = -780 - heightBonus;
+            trampoline.dip = 22;
+            playBounceSound(true, 1);
+            spawnBurst(trampoline.x, trampoline.y, '#fbbf24', 18, 1.1);
+        }
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+<!-- ... existing code ... -->
+            // Collectibles & Sky Props Interaction
+            for (const item of collectibles) {
+                if (item.collected) continue;
+                if (item.cooldown && item.cooldown > 0) item.cooldown -= dt;
+
+                const bobY = item.y + Math.sin(frameTime * 3 + item.bobOffset) * 6;
+                
+                // Star Magnet upgrade pull effect
+                if (item.type === 'star' && upgrades.magnet > 1) {
+                    const magnetRange = 80 + upgrades.magnet * 35;
+                    const dxm = player.x - item.x;
+                    const dym = player.y - bobY;
+                    const distm = Math.hypot(dxm, dym);
+                    if (distm < magnetRange) {
+                        item.x += (dxm / distm) * 320 * dt;
+                        item.y += (dym / distm) * 320 * dt;
+                    }
+                }
+
+                const dx = player.x - item.x;
+                const dy = player.y - bobY;
+                const dist = Math.hypot(dx, dy);
+
+                if (item.type === 'star' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    totalLifetimeStars += 1;
+                    setSavedStars(totalLifetimeStars);
+                    const pts = 30 * combo;
+                    score += pts;
+                    playStarSound();
+                    spawnBurst(item.x, bobY, '#fde047', 12, 0.9);
+                    addFloatingText(item.x, bobY - 12, `+${pts} ⭐`, '#fde047', 18);
+                } else if (item.type === 'balloon' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    player.vy = Math.min(player.vy, -250) - 520;
+                    player.canFlutter = true;
+                    player.squashX = 0.8;
+                    player.squashY = 1.24;
+                    const pts = 60 * combo;
+                    score += pts;
+                    playBalloonSound();
+                    spawnBurst(item.x, bobY, item.color, 16, 1.1);
+                    addFloatingText(item.x, bobY - 15, `BALLOON LIFT! +${pts}`, '#f472b6', 19);
+                } else if (item.type === 'bounceCloud' && (!item.cooldown || item.cooldown <= 0)) {
+// ... existing code ...
+                if (isSweetSpot) {
+                    combo = Math.min(15, combo + 1);
+                    const heightBonus = (upgrades.height - 1) * 35;
+                    const bouncePower = Math.min(1550, 860 + heightBonus + combo * 42);
+                    player.vy = -bouncePower;
+                    trampoline.dip = 28;
+                    trampoline.dipVelocity = 140;
+                    screenShake = 6;
+                    const pts = 50 * combo;
+                    score += pts;
+                    playBounceSound(true, combo);
+                    spawnBurst(player.x, trampoline.y, '#fbbf24', 20, 1.2);
+                    addFloatingText(player.x, trampoline.y - 36, `SWEET SPOT! +${pts}`, '#fde047', 22);
+                } else {
+                    combo = 1;
+                    const heightBonus = (upgrades.height - 1) * 20;
+                    player.vy = -810 - heightBonus;
+                    trampoline.dip = 19;
+                    trampoline.dipVelocity = 90;
+                    score += 15;
+                    playBounceSound(false, 1);
+                    spawnBurst(player.x, trampoline.y, '#38bdf8', 11, 0.85);
+                    addFloatingText(player.x, trampoline.y - 30, 'BOUNCE! +15', '#bae6fd', 17);
+                }
+
+                player.squashX = 1.38;
+                player.squashY = 0.66;
+            }
+
+            // Collectibles & Sky Props Interaction
+// ... existing code ...
