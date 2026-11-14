@@ -87,7 +87,47 @@
                     <div><span class="font-bold text-sky-300">Mid-Air Flip Boost:</span> Spacebar or Double-Tap in air</div>
                 </div>
             </div>
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <!-- Start Screen -->
+            <div id="startScreen" class="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 sm:p-8 rounded-3xl shadow-2xl text-center max-w-lg w-11/12 pointer-events-auto animate-pulse-slow">
+                <div class="text-5xl mb-2 drop-shadow-lg">🤸‍♂️</div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1 bg-gradient-to-r from-amber-300 via-orange-300 to-rose-400 bg-clip-text text-transparent">TRAMPOLINE BOUNCE</h1>
+                <p class="text-slate-200 text-xs sm:text-sm mb-4 leading-relaxed">Upgrade your gear in the shop to bounce higher and collect more stars!</p>
+                
+                <!-- Upgrade Shop Panel -->
+                <div class="bg-slate-800/80 rounded-2xl p-3 mb-4 border border-white/10 text-left">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">🛠️ Trampoline Workshop</span>
+                        <span class="text-xs font-bold text-amber-400">Stars: ⭐ <span id="shopStarsDisplay">0</span></span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <button id="upgradeHeightBtn" onclick="buyUpgrade('height')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Spring Power</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlHeight">1</span> (+Bounce)</p></div>
+                            <span id="costHeight" class="text-amber-300 font-bold">100 ⭐</span>
+                        </button>
+                        <button id="upgradeWidthBtn" onclick="buyUpgrade('width')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Wide Mat</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlWidth">1</span> (+Width)</p></div>
+                            <span id="costWidth" class="text-amber-300 font-bold">75 ⭐</span>
+                        </button>
+                        <button id="upgradeSweetBtn" onclick="buyUpgrade('sweet')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Sweet Spot</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlSweet">1</span> (+Size)</p></div>
+                            <span id="costSweet" class="text-amber-300 font-bold">120 ⭐</span>
+                        </button>
+                        <button id="upgradeMagnetBtn" onclick="buyUpgrade('magnet')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2 flex justify-between items-center transition cursor-pointer">
+                            <div class="text-left"><p class="font-bold text-white">Star Magnet</p><p class="text-[10px] text-slate-400">Lv.<span id="lvlMagnet">1</span> (Pull)</p></div>
+                            <span id="costMagnet" class="text-amber-300 font-bold">150 ⭐</span>
+                        </button>
+                    </div>
+                </div>
 
+                <button id="startBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-bold text-base rounded-2xl shadow-lg shadow-rose-500/30 transform active:scale-95 transition-all cursor-pointer">
+                    START BOUNCING! 🚀
+                </button>
+                <div class="mt-3 space-y-0.5 text-[11px] text-slate-300/90">
+                    <div><span class="font-bold text-amber-300">Steer:</span> Mouse / Touch / A-D</div>
+                    <div><span class="font-bold text-sky-300">Flip Boost:</span> Spacebar / Double-Tap</div>
+                </div>
+            </div>
             <!-- Game Over Screen -->
             <div id="gameOverScreen" class="hidden bg-slate-900/90 backdrop-blur-xl border border-white/20 p-7 sm:p-10 rounded-3xl shadow-2xl text-center max-w-md w-11/12 pointer-events-auto">
                 <div class="text-6xl mb-3">🌿</div>
