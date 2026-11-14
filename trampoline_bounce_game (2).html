@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trampoline Bounce Bonanza</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        @keyframes pulseSlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .animate-pulse-slow {
+            animation: pulseSlow 3s ease-in-out infinite;
+        }
+    </style>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤸‍♂️</text></svg>">
+</head>
+<body class="h-full overflow-hidden flex flex-col relative">
+
+    <!-- Top HUD Bar -->
+    <div id="hud" class="absolute top-0 left-0 right-0 z-30 p-4 flex justify-between items-center pointer-events-none">
+        <div class="flex items-center gap-3">
+            <!-- Score & Combo Card -->
+            <div class="bg-slate-900/80 backdrop-blur-md border border-white/15 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-3">
+                <div class="flex flex-col">
+                    <span class="text-[10px] tracking-widest text-slate-400 font-extrabold uppercase">Score</span>
+                    <span id="scoreDisplay" class="text-xl sm:text-2xl font-black text-amber-300 drop-shadow">0</span>
+                </div>
+                <div class="h-8 w-px bg-white/20"></div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] tracking-widest text-slate-400 font-extrabold uppercase">Combo</span>
+                    <span id="comboDisplay" class="text-lg sm:text-xl font-extrabold text-rose-400 drop-shadow">1x</span>
+                </div>
+            </div>
+
+            <!-- Altitude Meter -->
+            <div class="hidden sm:flex bg-slate-900/80 backdrop-blur-md border border-white/15 px-4 py-2 rounded-2xl shadow-xl flex-col">
+                <span class="text-[10px] tracking-widest text-slate-400 font-extrabold uppercase">Altitude</span>
+                <span id="altitudeDisplay" class="text-base font-extrabold text-sky-300 drop-shadow">0m</span>
+            </div>
+        </div>
+
+        <!-- Right Buttons (Pause, Sound, Export) -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="soundToggleBtn" onclick="toggleAudio()" class="w-11 h-11 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-white/15 rounded-2xl shadow-lg flex items-center justify-center text-xl cursor-pointer transition transform active:scale-95" title="Toggle Sound">
+                🔊
+            </button>
+            <button id="pauseBtn" onclick="togglePause()" class="w-11 h-11 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-white/15 rounded-2xl shadow-lg flex items-center justify-center text-xl cursor-pointer transition transform active:scale-95" title="Pause">
+                ⏸️
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game Canvas Container -->
+    <div class="flex-1 w-full h-full relative overflow-hidden bg-gradient-to-b from-sky-400 via-sky-300 to-indigo-900" id="canvasContainer">
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full block"></canvas>
+
+        <!-- Center Start / Pause / Game Over Overlays -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none p-4 z-40">
+            <!-- Start Screen / Workshop -->
+            <div id="startScreen" class="bg-slate-900/95 backdrop-blur-2xl border border-white/20 p-5 sm:p-7 rounded-3xl shadow-2xl text-center max-w-md w-full pointer-events-auto animate-pulse-slow">
+                <div class="text-4xl mb-1 drop-shadow-lg">🤸‍♂️</div>
+                <h1 class="text-2xl sm:text-3xl font-black text-white mb-1 bg-gradient-to-r from-amber-300 via-orange-300 to-rose-400 bg-clip-text text-transparent">TRAMPOLINE BOUNCE</h1>
+                <p class="text-slate-300 text-xs sm:text-sm mb-3 leading-relaxed">Upgrade your gear in the workshop to soar higher and collect stars!</p>
+                
+                <!-- Upgrade Shop Panel -->
+                <div class="bg-slate-800/90 rounded-2xl p-3 mb-4 border border-white/10 text-left shadow-inner">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">🛠️ Workshop</span>
+                        <span class="text-xs font-bold text-amber-400">Stars: ⭐ <span id="shopStarsDisplay">0</span></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button id="upgradeHeightBtn" onclick="buyUpgrade('height')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between transition cursor-pointer text-left">
+                            <div class="flex justify-between w-full items-center"><span class="font-bold text-white">🚀 Spring Power</span><span id="lvlHeight" class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded text-sky-300">Lv.1</span></div>
+                            <span id="costHeight" class="text-amber-300 font-bold mt-1 text-[11px]">80 ⭐</span>
+                        </button>
+                        <button id="upgradeWidthBtn" onclick="buyUpgrade('width')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between transition cursor-pointer text-left">
+                            <div class="flex justify-between w-full items-center"><span class="font-bold text-white">↔️ Wide Mat</span><span id="lvlWidth" class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded text-sky-300">Lv.1</span></div>
+                            <span id="costWidth" class="text-amber-300 font-bold mt-1 text-[11px]">60 ⭐</span>
+                        </button>
+                        <button id="upgradeSweetBtn" onclick="buyUpgrade('sweet')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between transition cursor-pointer text-left">
+                            <div class="flex justify-between w-full items-center"><span class="font-bold text-white">🎯 Sweet Spot</span><span id="lvlSweet" class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded text-sky-300">Lv.1</span></div>
+                            <span id="costSweet" class="text-amber-300 font-bold mt-1 text-[11px]">100 ⭐</span>
+                        </button>
+                        <button id="upgradeMagnetBtn" onclick="buyUpgrade('magnet')" class="bg-slate-700/80 hover:bg-slate-600 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between transition cursor-pointer text-left">
+                            <div class="flex justify-between w-full items-center"><span class="font-bold text-white">🧲 Star Magnet</span><span id="lvlMagnet" class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded text-sky-300">Lv.1</span></div>
+                            <span id="costMagnet" class="text-amber-300 font-bold mt-1 text-[11px]">120 ⭐</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button id="startBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-black text-base rounded-2xl shadow-lg shadow-rose-500/30 transform active:scale-95 transition-all cursor-pointer">
+                    START BOUNCING! 🚀
+                </button>
+
+                <!-- Export Game Button for publishing -->
+                <button onclick="downloadGameFile()" class="mt-2.5 w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs rounded-xl border border-white/10 transition cursor-pointer flex items-center justify-center gap-2">
+                    📦 Download Standalone HTML (Publish Ready)
+                </button>
+
+                <div class="mt-3 space-y-0.5 text-[11px] text-slate-300/90">
+                    <div><span class="font-bold text-amber-300">Steer:</span> Mouse / Touch Drag / A-D Keys</div>
+                    <div><span class="font-bold text-sky-300">Flip Boost:</span> Spacebar / Double-Tap</div>
+                </div>
+            </div>
+
+            <!-- Pause Modal -->
+            <div id="pauseScreen" class="hidden bg-slate-900/95 backdrop-blur-2xl border border-white/20 p-6 rounded-3xl shadow-2xl text-center max-w-sm w-full pointer-events-auto">
+                <h2 class="text-2xl font-black text-white mb-4">GAME PAUSED</h2>
+                <div class="space-y-3">
+                    <button onclick="togglePause()" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl transition cursor-pointer">Resume Game</button>
+                    <button onclick="restartFromPause()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition cursor-pointer">Restart Run</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Engine -->
+    <script>
+        // --- Canvas & Context Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const startBtn = document.getElementById('startBtn');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const comboDisplay = document.getElementById('comboDisplay');
+        const altitudeDisplay = document.getElementById('altitudeDisplay');
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Game State Variables ---
+        let gameState = 'START'; // START, PLAYING, PAUSED
+        let score = 0;
+        let altitude = 0;
+        let maxAltitude = 0;
+        let combo = 1;
+        let cameraY = 0;
+        let targetCameraY = 0;
+        let groundY = height - 100;
+        let screenShake = 0;
+        let soundEnabled = true;
+        let frameTime = 0;
+
+        // --- Safe Storage Helpers ---
+        function getSavedStars() {
+            try { return parseInt(localStorage.getItem('trampoline_total_stars') || '0', 10) || 0; } catch (e) { return 0; }
+        }
+        function setSavedStars(val) {
+            try { localStorage.setItem('trampoline_total_stars', String(val)); } catch (e) {}
+        }
+        function getSavedUpgrade(key, def) {
+            try { return parseInt(localStorage.getItem('trampoline_up_' + key) || String(def), 10) || def; } catch (e) { return def; }
+        }
+        function setSavedUpgrade(key, val) {
+            try { localStorage.setItem('trampoline_up_' + key, String(val)); } catch (e) {}
+        }
+
+        let totalLifetimeStars = getSavedStars();
+        let upgrades = {
+            height: getSavedUpgrade('height', 1),
+            width: getSavedUpgrade('width', 1),
+            sweet: getSavedUpgrade('sweet', 1),
+            magnet: getSavedUpgrade('magnet', 1)
+        };
+
+        function getUpgradeCost(type) {
+            const lvl = upgrades[type];
+            if (type === 'height') return lvl * 80;
+            if (type === 'width') return lvl * 60;
+            if (type === 'sweet') return lvl * 100;
+            if (type === 'magnet') return lvl * 120;
+            return 100;
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopStarsDisplay').textContent = Math.floor(totalLifetimeStars);
+            document.getElementById('lvlHeight').textContent = 'Lv.' + upgrades.height;
+            document.getElementById('costHeight').textContent = getUpgradeCost('height') + ' ⭐';
+            document.getElementById('lvlWidth').textContent = 'Lv.' + upgrades.width;
+            document.getElementById('costWidth').textContent = getUpgradeCost('width') + ' ⭐';
+            document.getElementById('lvlSweet').textContent = 'Lv.' + upgrades.sweet;
+            document.getElementById('costSweet').textContent = getUpgradeCost('sweet') + ' ⭐';
+            document.getElementById('lvlMagnet').textContent = 'Lv.' + upgrades.magnet;
+            document.getElementById('costMagnet').textContent = getUpgradeCost('magnet') + ' ⭐';
+        }
+        updateShopUI();
+
+        window.buyUpgrade = function(type) {
+            const cost = getUpgradeCost(type);
+            if (totalLifetimeStars >= cost) {
+                totalLifetimeStars -= cost;
+                upgrades[type]++;
+                setSavedStars(totalLifetimeStars);
+                setSavedUpgrade(type, upgrades[type]);
+                updateShopUI();
+                playStarSound();
+            } else {
+                playTone(180, 120, 0.2, 'sawtooth', 0.1);
+            }
+        };
+
+        // --- Web Audio Synthesizer ---
+        let audioCtx = null;
+        function ensureAudio() {
+            if (!audioCtx && soundEnabled) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freqStart, freqEnd, duration, type = 'sine', volume = 0.15) {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freqStart, audioCtx.currentTime);
+                if (freqEnd) {
+                    osc.frequency.exponentialRampToValueAtTime(Math.max(10, freqEnd), audioCtx.currentTime + duration);
+                }
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function playBounceSound(isSweetSpot, c) {
+            const baseFreq = isSweetSpot ? 350 + Math.min(c * 60, 500) : 260;
+            playTone(baseFreq, baseFreq * 1.8, 0.25, 'triangle', 0.2);
+        }
+        function playStarSound() {
+            playTone(587.33, 880, 0.18, 'sine', 0.15);
+        }
+        function playBalloonSound() {
+            playTone(300, 650, 0.3, 'sine', 0.2);
+        }
+
+        window.toggleAudio = function() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundToggleBtn').textContent = soundEnabled ? '🔊' : '🔇';
+        };
+
+        window.togglePause = function() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                pauseScreen.classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                pauseScreen.classList.add('hidden');
+            }
+        };
+
+        window.restartFromPause = function() {
+            pauseScreen.classList.add('hidden');
+            startGame();
+        };
+
+        // --- Game Entities ---
+        const trampoline = {
+            x: 0,
+            y: 0,
+            width: 240,
+            height: 22,
+            sweetSpotWidth: 70,
+            dip: 0,
+            dipVelocity: 0
+        };
+
+        const player = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            radius: 22,
+            rotation: 0,
+            spinSpeed: 0,
+            squashX: 1,
+            squashY: 1,
+            canFlutter: true,
+            scarfPoints: []
+        };
+
+        let collectibles = [];
+        let scenery = {
+            clouds: [],
+            hills: [],
+            mountains: [],
+            birds: []
+        };
+        let particles = [];
+        let floatingTexts = [];
+        let highestGeneratedY = 0;
+
+        // --- Input State & Listeners ---
+        const keys = { left: false, right: false, boost: false };
+        let pointerX = null;
+        let isPointerDown = false;
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                if (!keys.boost && player.canFlutter && gameState === 'PLAYING') {
+                    player.vy = Math.min(player.vy, -220) - 340;
+                    player.canFlutter = false;
+                    player.spinSpeed = 0.25;
+                    spawnBurst(player.x, player.y, '#38bdf8', 12, 0.8);
+                    playBalloonSound();
+                }
+                keys.boost = true;
+            }
+            if (e.code === 'Escape') {
+                togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.boost = false;
+        });
+
+        canvasContainer.addEventListener('pointerdown', (e) => {
+            isPointerDown = true;
+            pointerX = e.clientX;
+            ensureAudio();
+        });
+        canvasContainer.addEventListener('pointermove', (e) => {
+            if (isPointerDown) {
+                pointerX = e.clientX;
+            }
+        });
+        canvasContainer.addEventListener('pointerup', () => {
+            isPointerDown = false;
+            pointerX = null;
+        });
+        canvasContainer.addEventListener('pointercancel', () => {
+            isPointerDown = false;
+            pointerX = null;
+        });
+
+        // --- Scenery Initialization ---
+        function initScenery() {
+            scenery.clouds = [];
+            scenery.hills = [];
+            scenery.mountains = [];
+            scenery.birds = [];
+
+            for (let i = 0; i < 14; i++) {
+                scenery.clouds.push({
+                    x: Math.random() * width,
+                    y: groundY - Math.random() * 4000,
+                    w: 80 + Math.random() * 120,
+                    speed: (Math.random() - 0.5) * 25
+                });
+            }
+
+            for (let i = 0; i < 6; i++) {
+                scenery.hills.push({
+                    x: i * (width / 5) - 50,
+                    y: groundY,
+                    w: width / 3,
+                    h: 120 + Math.random() * 80
+                });
+            }
+
+            for (let i = 0; i < 4; i++) {
+                scenery.mountains.push({
+                    x: i * (width / 3) - 100,
+                    y: groundY - 140,
+                    w: width / 2,
+                    h: 240 + Math.random() * 120
+                });
+            }
+        }
+
+        // --- Sky Generation (Items) ---
+        function spawnSkyBand(startY, endY) {
+            let currY = startY;
+            while (currY > endY) {
+                currY -= 180 + Math.random() * 140;
+                const roll = Math.random();
+                if (roll < 0.55) {
+                    // Star cluster
+                    const count = 3 + Math.floor(Math.random() * 4);
+                    const startX = width * 0.2 + Math.random() * (width * 0.6);
+                    for (let c = 0; c < count; c++) {
+                        collectibles.push({
+                            type: 'star',
+                            x: startX + (c - count / 2) * 45,
+                            y: currY + (Math.random() - 0.5) * 40,
+                            radius: 14,
+                            collected: false,
+                            bobOffset: Math.random() * Math.PI
+                        });
+                    }
+                } else if (roll < 0.82) {
+                    // Balloon
+                    collectibles.push({
+                        type: 'balloon',
+                        x: width * 0.15 + Math.random() * (width * 0.7),
+                        y: currY,
+                        radius: 20,
+                        collected: false,
+                        color: ['#f43f5e', '#ec4899', '#8b5cf6', '#06b6d4', '#10b981'][Math.floor(Math.random() * 5)],
+                        bobOffset: Math.random() * Math.PI
+                    });
+                } else {
+                    // Bounce Cloud
+                    collectibles.push({
+                        type: 'bounceCloud',
+                        x: width * 0.2 + Math.random() * (width * 0.6),
+                        y: currY,
+                        radius: 36,
+                        collected: false,
+                        cooldown: 0,
+                        bobOffset: Math.random() * Math.PI
+                    });
+                }
+            }
+        }
+
+        // --- Reset / Start Game ---
+        function resetGame() {
+            resizeCanvas();
+            score = 0;
+            altitude = 0;
+            maxAltitude = 0;
+            combo = 1;
+            cameraY = 0;
+            screenShake = 0;
+
+            const widthBonus = (upgrades.width - 1) * 16;
+            trampoline.width = Math.min(360, Math.max(180, width * 0.25 + widthBonus));
+            trampoline.sweetSpotWidth = 72 + (upgrades.sweet - 1) * 16;
+            trampoline.x = width / 2;
+            trampoline.y = groundY - 26;
+            trampoline.dip = 0;
+            trampoline.dipVelocity = 0;
+
+            player.x = width / 2;
+            player.y = trampoline.y - 130;
+            player.vx = 0;
+            player.vy = 0;
+            player.rotation = 0;
+            player.spinSpeed = 0;
+            player.squashX = 1;
+            player.squashY = 1;
+            player.canFlutter = true;
+            player.scarfPoints = Array.from({ length: 6 }, (_, i) => ({
+                x: player.x - i * 6,
+                y: player.y + 8
+            }));
+
+            collectibles = [];
+            particles = [];
+            floatingTexts = [];
+            initScenery();
+            highestGeneratedY = groundY - 300;
+            spawnSkyBand(highestGeneratedY, highestGeneratedY - 3500);
+            highestGeneratedY -= 3500;
+
+            updateHUD();
+            updateShopUI();
+        }
+
+        function startGame() {
+            ensureAudio();
+            resetGame();
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+
+            const heightBonus = (upgrades.height - 1) * 50;
+            player.vy = -840 - heightBonus;
+            trampoline.dip = 24;
+            playBounceSound(true, 1);
+            spawnBurst(trampoline.x, trampoline.y, '#fbbf24', 18, 1.1);
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        // --- Particle FX ---
+        function spawnBurst(x, y, color, count = 10, speedMul = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (2 + Math.random() * 6) * speedMul;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: 3 + Math.random() * 4,
+                    color: color,
+                    alpha: 1,
+                    decay: 0.02 + Math.random() * 0.025
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color, size = 16) {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                size: size,
+                alpha: 1,
+                vy: -1.8
+            });
+        }
+
+        // --- Update Loop ---
+        let lastTime = performance.now();
+        function gameLoop(now) {
+            const dt = Math.min((now - lastTime) / 1000, 0.033);
+            lastTime = now;
+            frameTime += dt;
+
+            if (gameState === 'PLAYING') {
+                update(dt);
+            }
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            // Player Horizontal Steering
+            let targetVx = 0;
+            if (keys.left) targetVx = -420;
+            if (keys.right) targetVx = 420;
+            if (pointerX !== null) {
+                const dx = pointerX - player.x;
+                targetVx = Math.max(-500, Math.min(500, dx * 3.5));
+            }
+            player.vx += (targetVx - player.vx) * 12 * dt;
+            player.x += player.vx * dt;
+
+            // Screen Bounds Wrap
+            if (player.x < 30) player.x = 30;
+            if (player.x > width - 30) player.x = width - 30;
+
+            // Gravity & Vertical Motion
+            const gravity = 1150;
+            player.vy += gravity * dt;
+            player.y += player.vy * dt;
+
+            // Air Rotation / Spin recovery
+            if (player.vy < 0) {
+                player.rotation += player.spinSpeed;
+                player.spinSpeed *= 0.96;
+            } else {
+                player.rotation *= 0.92;
+            }
+
+            // Altitude Calculation (0 at ground, positive upwards)
+            const currentAlt = Math.max(0, Math.floor((groundY - player.y) * 0.2));
+            if (currentAlt > altitude) {
+                altitude = currentAlt;
+                if (altitude > maxAltitude) maxAltitude = altitude;
+            }
+
+            // Dynamic Camera Tracking (Smooth follow upward & auto-catch tracking down)
+            const targetCamY = Math.min(0, player.y - height * 0.55);
+            cameraY += (targetCamY - cameraY) * 8 * dt;
+
+            // Auto-Catch Trampoline Tracking: Trampoline smoothly slides under player on descent
+            if (player.vy > 0) {
+                const trackSpeed = 14 * dt;
+                trampoline.x += (player.x - trampoline.x) * Math.min(1, trackSpeed * 1.8);
+            } else {
+                trampoline.x += (width / 2 - trampoline.x) * 4 * dt;
+            }
+            trampoline.x = Math.max(trampoline.width / 2 + 20, Math.min(width - trampoline.width / 2 - 20, trampoline.x));
+
+            // Trampoline Spring Physics (Hooke's Law)
+            const springK = 380;
+            const damping = 18;
+            const springAccel = -springK * trampoline.dip - damping * trampoline.dipVelocity;
+            trampoline.dipVelocity += springAccel * dt;
+            trampoline.dip += trampoline.dipVelocity * dt;
+            trampoline.dip = Math.max(-10, Math.min(38, trampoline.dip));
+
+            // Bounce Collision with Trampoline
+            const contactY = trampoline.y - 10;
+            if (player.vy > 0 && player.y >= contactY - 10 && player.y <= contactY + 30) {
+                const halfMat = trampoline.width / 2;
+                if (player.x >= trampoline.x - halfMat && player.x <= trampoline.x + halfMat) {
+                    // Successful Bounce!
+                    player.y = contactY;
+                    player.canFlutter = true;
+
+                    const distFromCenter = Math.abs(player.x - trampoline.x);
+                    const isSweetSpot = distFromCenter <= trampoline.sweetSpotWidth / 2;
+
+                    if (isSweetSpot) {
+                        combo = Math.min(25, combo + 1);
+                        const heightBonus = (upgrades.height - 1) * 40;
+                        const bouncePower = Math.min(1700, 920 + heightBonus + combo * 48);
+                        player.vy = -bouncePower;
+                        trampoline.dip = 30;
+                        trampoline.dipVelocity = 150;
+                        screenShake = 7;
+                        const pts = 50 * combo;
+                        score += pts;
+                        playBounceSound(true, combo);
+                        spawnBurst(player.x, trampoline.y, '#fbbf24', 22, 1.25);
+                        addFloatingText(player.x, trampoline.y - 40, `SWEET SPOT! +${pts}`, '#fde047', 22);
+                    } else {
+                        combo = 1;
+                        const heightBonus = (upgrades.height - 1) * 25;
+                        player.vy = -860 - heightBonus;
+                        trampoline.dip = 20;
+                        trampoline.dipVelocity = 95;
+                        score += 15;
+                        playBounceSound(false, 1);
+                        spawnBurst(player.x, trampoline.y, '#38bdf8', 12, 0.9);
+                        addFloatingText(player.x, trampoline.y - 30, 'BOUNCE! +15', '#bae6fd', 17);
+                    }
+
+                    player.squashX = 1.42;
+                    player.squashY = 0.62;
+                }
+            }
+
+            // Squash & Stretch spring recovery
+            player.squashX += (1 - player.squashX) * 12 * dt;
+            player.squashY += (1 - player.squashY) * 12 * dt;
+
+            // Collectibles & Sky Props Interaction
+            for (const item of collectibles) {
+                if (item.collected) continue;
+                if (item.cooldown && item.cooldown > 0) item.cooldown -= dt;
+
+                const bobY = item.y + Math.sin(frameTime * 3 + item.bobOffset) * 6;
+                
+                // Star Magnet upgrade pull effect
+                if (item.type === 'star' && upgrades.magnet > 1) {
+                    const magnetRange = 90 + upgrades.magnet * 40;
+                    const dxm = player.x - item.x;
+                    const dym = player.y - bobY;
+                    const distm = Math.hypot(dxm, dym);
+                    if (distm < magnetRange) {
+                        item.x += (dxm / distm) * 360 * dt;
+                        item.y += (dym / distm) * 360 * dt;
+                    }
+                }
+
+                const dx = player.x - item.x;
+                const dy = player.y - bobY;
+                const dist = Math.hypot(dx, dy);
+
+                if (item.type === 'star' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    totalLifetimeStars += 1;
+                    setSavedStars(totalLifetimeStars);
+                    const pts = 30 * combo;
+                    score += pts;
+                    playStarSound();
+                    spawnBurst(item.x, bobY, '#fde047', 14, 0.95);
+                    addFloatingText(item.x, bobY - 14, `+${pts} ⭐`, '#fde047', 18);
+                } else if (item.type === 'balloon' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    player.vy = Math.min(player.vy, -250) - 560;
+                    player.canFlutter = true;
+                    player.squashX = 0.8;
+                    player.squashY = 1.28;
+                    const pts = 60 * combo;
+                    score += pts;
+                    playBalloonSound();
+                    spawnBurst(item.x, bobY, item.color, 18, 1.15);
+                    addFloatingText(item.x, bobY - 16, `BALLOON LIFT! +${pts}`, '#f472b6', 19);
+                } else if (item.type === 'bounceCloud' && (!item.cooldown || item.cooldown <= 0)) {
+                    if (dist < player.radius + item.radius + 12) {
+                        item.cooldown = 2.0;
+                        player.vy = -1100;
+                        player.canFlutter = true;
+                        player.squashX = 1.35;
+                        player.squashY = 0.7;
+                        score += 80 * combo;
+                        playBounceSound(true, 3);
+                        spawnBurst(item.x, bobY, '#ffffff', 20, 1.3);
+                        addFloatingText(item.x, bobY - 20, 'CLOUD BOUNCE! ☁️', '#ffffff', 20);
+                    }
+                }
+            }
+
+            // Infinite Sky Generation upwards
+            if (player.y < highestGeneratedY + 1800) {
+                spawnSkyBand(highestGeneratedY, highestGeneratedY - 3000);
+                highestGeneratedY -= 3000;
+            }
+
+            // Scarf Physics Simulation
+            if (player.scarfPoints.length > 0) {
+                player.scarfPoints[0].x = player.x - player.vx * 0.04;
+                player.scarfPoints[0].y = player.y + 4 - player.vy * 0.04;
+                for (let i = 1; i < player.scarfPoints.length; i++) {
+                    const prev = player.scarfPoints[i - 1];
+                    const curr = player.scarfPoints[i];
+                    const dx = prev.x - curr.x;
+                    const dy = prev.y - curr.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > 8) {
+                        curr.x = prev.x - (dx / dist) * 8;
+                        curr.y = prev.y - (dy / dist) * 8;
+                    }
+                    curr.y += 30 * dt; // gravity on scarf
+                }
+            }
+
+            // Particles Update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 400 * dt;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // Floating Texts Update
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy;
+                ft.alpha -= 0.02;
+                if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+            }
+
+            if (screenShake > 0) screenShake -= dt * 10;
+
+            updateHUD();
+        }
+
+        function updateHUD() {
+            scoreDisplay.textContent = Math.floor(score);
+            comboDisplay.textContent = combo + 'x';
+            altitudeDisplay.textContent = altitude + 'm';
+            updateShopUI();
+        }
+
+        // --- Render Loop ---
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            ctx.save();
+            // Screen Shake Offset
+            if (screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * screenShake * 3;
+                const shakeY = (Math.random() - 0.5) * screenShake * 3;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            // Parallax Sky Gradient based on altitude
+            const altRatio = Math.min(1, altitude / 3000);
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+            skyGrad.addColorStop(0, interpolateColor('#38bdf8', '#090d16', altRatio));
+            skyGrad.addColorStop(0.5, interpolateColor('#bae6fd', '#1e1b4b', altRatio));
+            skyGrad.addColorStop(1, interpolateColor('#818cf8', '#311042', altRatio));
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.translate(0, -cameraY * 0.4); // Parallax factor for background scenery
+
+            // Draw Mountains
+            ctx.fillStyle = '#334155';
+            for (const m of scenery.mountains) {
+                ctx.beginPath();
+                ctx.moveTo(m.x, groundY);
+                ctx.lineTo(m.x + m.w / 2, groundY - m.h);
+                ctx.lineTo(m.x + m.w, groundY);
+                ctx.closePath();
+                ctx.fill();
+                // Snow cap
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.moveTo(m.x + m.w / 2, groundY - m.h);
+                ctx.lineTo(m.x + m.w / 2 - 25, groundY - m.h + 45);
+                ctx.lineTo(m.x + m.w / 2 + 25, groundY - m.h + 45);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#334155';
+            }
+
+            // Draw Hills
+            ctx.fillStyle = '#166534';
+            for (const h of scenery.hills) {
+                ctx.beginPath();
+                ctx.ellipse(h.x + h.w / 2, groundY, h.w / 2, h.h, 0, Math.PI, 0, false);
+                ctx.fill();
+            }
+
+            // Draw Parallax Clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+            for (const c of scenery.clouds) {
+                const screenCloudY = c.y + cameraY * 0.35;
+                if (screenCloudY > -100 && screenCloudY < height + 100) {
+                    ctx.beginPath();
+                    ctx.arc(c.x, screenCloudY, c.w * 0.35, 0, Math.PI * 2);
+                    ctx.arc(c.x + c.w * 0.3, screenCloudY - 10, c.w * 0.28, 0, Math.PI * 2);
+                    ctx.arc(c.x - c.w * 0.3, screenCloudY - 5, c.w * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore(); // End Background Parallax
+
+            // Draw Game World (Entities at cameraY)
+            ctx.save();
+            ctx.translate(0, -cameraY);
+
+            // Draw Collectibles & Sky Props
+            for (const item of collectibles) {
+                if (item.collected) continue;
+                const bobY = item.y + Math.sin(frameTime * 3 + item.bobOffset) * 6;
+
+                if (item.type === 'star') {
+                    ctx.save();
+                    ctx.translate(item.x, bobY);
+                    ctx.rotate(frameTime * 2);
+                    ctx.fillStyle = '#fde047';
+                    ctx.strokeStyle = '#ca8a04';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let s = 0; s < 5; s++) {
+                        const angle = (s * Math.PI * 2) / 5 - Math.PI / 2;
+                        const r1 = 15;
+                        const r2 = 7;
+                        const x1 = Math.cos(angle) * r1;
+                        const y1 = Math.sin(angle) * r1;
+                        const x2 = Math.cos(angle + Math.PI / 5) * r2;
+                        const y2 = Math.sin(angle + Math.PI / 5) * r2;
+                        if (s === 0) ctx.moveTo(x1, y1);
+                        else ctx.lineTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (item.type === 'balloon') {
+                    ctx.save();
+                    ctx.translate(item.x, bobY);
+                    // String
+                    ctx.strokeStyle = '#cbd5e1';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 20);
+                    ctx.lineTo(0, 35);
+                    ctx.stroke();
+                    // Balloon Body
+                    ctx.fillStyle = item.color;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 18, 22, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Highlight
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.beginPath();
+                    ctx.ellipse(-5, -6, 5, 8, -Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                } else if (item.type === 'bounceCloud') {
+                    ctx.save();
+                    ctx.translate(item.x, bobY);
+                    ctx.fillStyle = item.cooldown > 0 ? 'rgba(203, 213, 225, 0.6)' : 'rgba(255, 255, 255, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
+                    ctx.arc(-22, 10, 20, 0, Math.PI * 2);
+                    ctx.arc(22, 10, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Cloud Ring / Glow
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // Draw Ground
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(-100, groundY, width + 200, height + 1000);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(-100, groundY, width + 200, 14);
+
+            // Draw Trampoline Legs & Springs
+            const halfW = trampoline.width / 2;
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+
+            // Left Leg
+            ctx.beginPath();
+            ctx.moveTo(trampoline.x - halfW + 15, groundY);
+            ctx.lineTo(trampoline.x - halfW + 35, trampoline.y + 15);
+            ctx.stroke();
+            // Right Leg
+            ctx.beginPath();
+            ctx.moveTo(trampoline.x + halfW - 15, groundY);
+            ctx.lineTo(trampoline.x + halfW - 35, trampoline.y + 15);
+            ctx.stroke();
+
+            // Trampoline Mat (with dip physics)
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(trampoline.x - halfW, trampoline.y);
+            ctx.quadraticCurveTo(trampoline.x, trampoline.y + trampoline.dip, trampoline.x + halfW, trampoline.y);
+            ctx.lineTo(trampoline.x + halfW, trampoline.y + trampoline.height);
+            ctx.quadraticCurveTo(trampoline.x, trampoline.y + trampoline.height + trampoline.dip, trampoline.x - halfW, trampoline.y + trampoline.height);
+            ctx.closePath();
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Golden Sweet Spot on Mat
+            const sweetW = trampoline.sweetSpotWidth;
+            ctx.beginPath();
+            ctx.moveTo(trampoline.x - sweetW / 2, trampoline.y + 3);
+            ctx.quadraticCurveTo(trampoline.x, trampoline.y + trampoline.dip * 0.9 + 3, trampoline.x + sweetW / 2, trampoline.y + 3);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw Scarf
+            if (player.scarfPoints.length > 1) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y);
+                for (let i = 0; i < player.scarfPoints.length; i++) {
+                    ctx.lineTo(player.scarfPoints[i].x, player.scarfPoints[i].y);
+                }
+                ctx.stroke();
+            }
+
+            // Draw Player ("Bouncy Bob")
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.rotation);
+            ctx.scale(player.squashX, player.squashY);
+
+            // Body (Suit)
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#1d4ed8';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Happy Face / Eyes
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-7, -4, 4.5, 0, Math.PI * 2);
+            ctx.arc(7, -4, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(-6, -4, 2, 0, Math.PI * 2);
+            ctx.arc(8, -4, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Big Smile
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(1, 2, 8, 0.1 * Math.PI, 0.9 * Math.PI);
+            ctx.stroke();
+
+            // Sneakers
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(-14, player.radius - 4, 10, 8);
+            ctx.fillRect(4, player.radius - 4, 10, 8);
+
+            ctx.restore();
+
+            // Draw Particles
+            for (const p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Draw Floating Texts
+            for (const ft of floatingTexts) {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = `900 ${ft.size}px 'Inter', sans-serif`;
+                ctx.fillStyle = ft.color;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 4;
+                ctx.textAlign = 'center';
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            }
+
+            ctx.restore(); // End World Translation
+            ctx.restore(); // End Screen Shake
+        }
+
+        // Color interpolation helper for sky gradient
+        function interpolateColor(color1, color2, factor) {
+            const c1 = parseInt(color1.slice(1), 16);
+            const c2 = parseInt(color2.slice(1), 16);
+            const r1 = (c1 >> 16) & 255, g1 = (c1 >> 8) & 255, b1 = c1 & 255;
+            const r2 = (c2 >> 16) & 255, g2 = (c2 >> 8) & 255, b2 = c2 & 255;
+            const r = Math.round(r1 + factor * (r2 - r1));
+            const g = Math.round(g1 + factor * (g2 - g1));
+            const b = Math.round(b1 + factor * (b2 - b1));
+            return `rgb(${r},${g},${b})`;
+        }
+
+        // --- Standalone HTML Export Function ---
+        window.downloadGameFile = function() {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trampoline_game.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        // Initialize Start Screen
+        resetGame();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
