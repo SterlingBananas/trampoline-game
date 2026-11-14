@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trampoline Bounce Bonanza</title>
+    <!-- Tailwind CSS for UI overlay -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .animate-pulse-slow {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden bg-slate-900">
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="uiOverlay" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 sm:p-5">
+        <!-- Top Header: Scores, Altitude, Combo & Mute -->
+        <div class="flex justify-between items-start w-full max-w-5xl mx-auto gap-2">
+            <!-- Left Stats: Score & Best -->
+            <div class="flex flex-wrap gap-2 pointer-events-auto">
+                <div class="bg-slate-900/75 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2 shadow-xl flex items-center space-x-2">
+                    <span class="text-amber-400 text-lg sm:text-2xl font-bold drop-shadow">⭐ <span id="scoreDisplay">0</span></span>
+                </div>
+                <div class="bg-slate-900/75 backdrop-blur-md border border-white/15 rounded-2xl px-3.5 py-2 shadow-xl flex items-center space-x-2">
+                    <span class="text-emerald-400 text-xs sm:text-base font-semibold">🏆 BEST: <span id="highScoreDisplay">0</span></span>
+                </div>
+                <div id="comboBadge" class="hidden bg-gradient-to-r from-amber-500/90 to-orange-500/90 backdrop-blur-md border border-amber-200/40 rounded-2xl px-3.5 py-2 shadow-xl items-center">
+                    <span class="text-white text-xs sm:text-base font-bold tracking-wide">🔥 COMBO x<span id="comboDisplay">1</span></span>
+                </div>
+            </div>
+
+            <!-- Right Stats: Altitude & Mute Toggle -->
+            <div class="flex items-center gap-2 pointer-events-auto">
+                <div class="bg-slate-900/75 backdrop-blur-md border border-white/15 rounded-2xl px-3.5 py-2 shadow-xl flex items-center space-x-1.5">
+                    <span class="text-sky-300 text-xs sm:text-base font-semibold">☁️ <span id="altitudeDisplay">0</span>m</span>
+                </div>
+                <button id="muteBtn" title="Toggle Sound" class="bg-slate-900/75 hover:bg-slate-800/90 backdrop-blur-md border border-white/15 rounded-2xl p-2.5 shadow-xl text-white text-base sm:text-lg transition active:scale-95 cursor-pointer">
+                    🔊
+                </button>
+            </div>
+        </div>
+
+        <!-- Side Altitude Progress Bar -->
+        <div class="hidden sm:flex fixed right-5 top-1/2 -translate-y-1/2 flex-col items-center gap-1.5 pointer-events-none opacity-80">
+            <span class="text-[10px] font-bold text-white/80 uppercase tracking-wider">Space</span>
+            <div class="w-2.5 h-48 bg-slate-950/60 border border-white/20 rounded-full p-0.5 flex flex-col justify-end overflow-hidden backdrop-blur-sm">
+                <div id="altitudeBarFill" class="w-full bg-gradient-to-t from-emerald-400 via-sky-400 to-amber-300 rounded-full transition-all duration-150" style="height: 2%;"></div>
+            </div>
+            <span class="text-[10px] font-bold text-white/80 uppercase tracking-wider">Meadow</span>
+        </div>
+
+        <!-- Center Start / Game Over Menus -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <!-- Start Screen -->
+            <div id="startScreen" class="bg-slate-900/85 backdrop-blur-xl border border-white/20 p-7 sm:p-10 rounded-3xl shadow-2xl text-center max-w-md w-11/12 pointer-events-auto animate-pulse-slow">
+                <div class="text-6xl mb-3 drop-shadow-lg">🤸‍♂️</div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-amber-300 via-orange-300 to-rose-400 bg-clip-text text-transparent">TRAMPOLINE BOUNCE</h1>
+                <p class="text-slate-200 text-sm sm:text-base mb-5 leading-relaxed">Soar endlessly into the clouds! Your auto-catch trampoline never misses—steer in the air to collect stars, pop balloons, and nail Sweet Spot combos.</p>
+                <button id="startBtn" class="w-full py-4 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-bold text-lg rounded-2xl shadow-lg shadow-rose-500/30 transform active:scale-95 transition-all cursor-pointer">
+                    START BOUNCING! 🚀
+                </button>
+                <div class="mt-4 space-y-1 text-xs text-slate-300/90">
+                    <div><span class="font-bold text-amber-300">Steer & Aim:</span> Drag, Mouse, or Left / Right / A / D</div>
+                    <div><span class="font-bold text-sky-300">Mid-Air Flip Boost:</span> Spacebar or Double-Tap in air</div>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="gameOverScreen" class="hidden bg-slate-900/90 backdrop-blur-xl border border-white/20 p-7 sm:p-10 rounded-3xl shadow-2xl text-center max-w-md w-11/12 pointer-events-auto">
+                <div class="text-6xl mb-3">🌿</div>
+                <h2 class="text-3xl sm:text-4xl font-bold text-white mb-1">SOFT LANDING!</h2>
+                <p class="text-slate-300 text-sm sm:text-base mb-5">Great run in the sky! Ready for another jump?</p>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-white/10">
+                        <p class="text-slate-400 text-xs uppercase tracking-wider">Final Score</p>
+                        <p id="finalScore" class="text-3xl font-bold text-amber-400">0</p>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-white/10">
+                        <p class="text-slate-400 text-xs uppercase tracking-wider">Max Altitude</p>
+                        <p id="finalAltitude" class="text-3xl font-bold text-sky-400">0m</p>
+                    </div>
+                </div>
+                <button id="restartBtn" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-lg rounded-2xl shadow-lg shadow-teal-500/30 transform active:scale-95 transition-all cursor-pointer">
+                    BOUNCE AGAIN 🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Footer info -->
+        <div class="text-center text-white/60 text-xs pointer-events-none pb-1 drop-shadow">
+            Auto-Catch Trampoline Active • Steer: Mouse / Touch / A-D • Flip Boost: Space / Double-Tap
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Elements
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const altitudeDisplay = document.getElementById('altitudeDisplay');
+        const altitudeBarFill = document.getElementById('altitudeBarFill');
+        const comboBadge = document.getElementById('comboBadge');
+        const comboDisplay = document.getElementById('comboDisplay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalAltitudeEl = document.getElementById('finalAltitude');
+
+        // Safe Storage Helper
+        function getSavedBest() {
+            try {
+                return parseInt(localStorage.getItem('trampoline_best_score') || '0', 10) || 0;
+            } catch (e) {
+                return 0;
+            }
+        }
+        function setSavedBest(val) {
+            try {
+                localStorage.setItem('trampoline_best_score', String(val));
+            } catch (e) {}
+        }
+
+        // --- Input State & Listeners ---
+        const keys = { left: false, right: false };
+        let pointerX = null;
+        let lastTapTime = 0;
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                triggerFlutterBoost();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            pointerX = e.clientX;
+            const now = Date.now();
+            if (now - lastTapTime < 280) {
+                triggerFlutterBoost();
+            }
+            lastTapTime = now;
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (e.buttons > 0 || e.pointerType === 'mouse') {
+                pointerX = e.clientX;
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            pointerX = null;
+        });
+
+        // --- Audio Synthesizer (Web Audio API) ---
+        let audioCtx = null;
+        let isMuted = false;
+
+        function ensureAudio() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+        }
+
+        function playTone(freqStart, freqEnd, duration, type = 'sine', volume = 0.14) {
+            if (isMuted) return;
+            ensureAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freqStart, now);
+                osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + duration);
+                gain.gain.setValueAtTime(volume, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + duration);
+            } catch (e) {}
+        }
+
+        function playBounceSound(isSweetSpot, combo) {
+            const pitchBoost = Math.min(combo * 22, 220);
+            if (isSweetSpot) {
+                playTone(260 + pitchBoost, 680 + pitchBoost, 0.28, 'triangle', 0.18);
+                setTimeout(() => playTone(520 + pitchBoost, 960 + pitchBoost, 0.22, 'sine', 0.12), 45);
+            } else {
+                playTone(170 + pitchBoost * 0.5, 410 + pitchBoost * 0.5, 0.22, 'sine', 0.15);
+            }
+        }
+
+        function playStarSound() {
+            playTone(660, 1180, 0.18, 'sine', 0.14);
+        }
+
+        function playBalloonSound() {
+            playTone(340, 880, 0.28, 'triangle', 0.16);
+        }
+
+        function playFlutterSound() {
+            playTone(290, 520, 0.16, 'sine', 0.11);
+        }
+
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        // --- Responsive Canvas Sizing ---
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let groundY = height - 95;
+
+        function resizeCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = Math.floor(width * dpr);
+            canvas.height = Math.floor(height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            groundY = height - 95;
+            if (trampoline) {
+                trampoline.y = groundY - 26;
+                trampoline.x = Math.max(trampoline.width / 2 + 12, Math.min(width - trampoline.width / 2 - 12, trampoline.x));
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Game State ---
+        let gameState = 'START'; // 'START' | 'PLAYING' | 'GAMEOVER'
+        let score = 0;
+        let highScore = getSavedBest();
+        let altitude = 0;
+        let maxAltitude = 0;
+        let combo = 1;
+        let cameraY = 0;
+        let screenShake = 0;
+        let frameTime = 0;
+
+        highScoreDisplay.textContent = highScore;
+
+        // Player ("Bouncy Bob")
+        const player = {
+            x: width / 2,
+            y: groundY - 120,
+            vx: 0,
+            vy: 0,
+            radius: 22,
+            rotation: 0,
+            spinSpeed: 0,
+            squashX: 1,
+            squashY: 1,
+            canFlutter: true,
+            scarfPoints: [],
+            expression: 'happy'
+        };
+
+        // Trampoline
+        const trampoline = {
+            x: width / 2,
+            y: groundY - 26,
+            width: Math.min(230, Math.max(175, width * 0.24)),
+            height: 20,
+            dip: 0,
+            dipVelocity: 0,
+            sweetSpotWidth: 68
+        };
+
+        // World Props & Particles
+        let clouds = [];
+        let backgroundStars = [];
+        let collectibles = [];
+        let floatingTexts = [];
+        let particles = [];
+        let highestGeneratedY = 0;
+
+        function initScenery() {
+            clouds = [];
+            for (let i = 0; i < 14; i++) {
+                clouds.push({
+                    x: Math.random() * width,
+                    y: groundY - 180 - Math.random() * 2600,
+                    scale: 0.65 + Math.random() * 0.85,
+                    speed: (Math.random() * 14 + 6) * (Math.random() < 0.5 ? 1 : -1),
+                    layer: Math.random() < 0.5 ? 0.35 : 0.65
+                });
+            }
+
+            backgroundStars = [];
+            for (let i = 0; i < 80; i++) {
+                backgroundStars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height * 0.75,
+                    size: 1 + Math.random() * 2.2,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function spawnSkyBand(fromY, toY) {
+            for (let y = fromY; y > toY; y -= 145) {
+                const rand = Math.random();
+                const margin = 65;
+                const x = margin + Math.random() * Math.max(80, width - margin * 2);
+
+                if (rand < 0.56) {
+                    // Golden Star
+                    collectibles.push({
+                        type: 'star',
+                        x,
+                        y,
+                        radius: 17,
+                        bobOffset: Math.random() * Math.PI * 2,
+                        collected: false
+                    });
+                } else if (rand < 0.78) {
+                    // Lift Balloon
+                    const colors = ['#fb7185', '#38bdf8', '#a78bfa', '#34d399', '#fbbf24'];
+                    collectibles.push({
+                        type: 'balloon',
+                        x,
+                        y,
+                        radius: 22,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        bobOffset: Math.random() * Math.PI * 2,
+                        collected: false
+                    });
+                } else if (rand < 0.91) {
+                    // Fluffy Bounce Cloud
+                    collectibles.push({
+                        type: 'bounceCloud',
+                        x,
+                        y,
+                        width: 96,
+                        height: 28,
+                        bobOffset: Math.random() * Math.PI * 2,
+                        cooldown: 0
+                    });
+                } else {
+                    // Gentle Wind Updraft
+                    collectibles.push({
+                        type: 'updraft',
+                        x,
+                        y,
+                        width: 68,
+                        height: 150,
+                        bobOffset: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#fde047', size = 20) {
+            floatingTexts.push({
+                x,
+                y,
+                text,
+                color,
+                size,
+                vy: -65,
+                life: 1.0
+            });
+        }
+
+        function spawnBurst(x, y, color, count = 14, speedScale = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+                const speed = (60 + Math.random() * 170) * speedScale;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 30,
+                    size: 3 + Math.random() * 4.5,
+                    color,
+                    life: 0.65 + Math.random() * 0.35,
+                    maxLife: 1.0
+                });
+            }
+        }
+
+        function triggerFlutterBoost() {
+            if (gameState !== 'PLAYING') return;
+            if (player.canFlutter && player.y < trampoline.y - 60) {
+                player.canFlutter = false;
+                player.vy = Math.min(player.vy, 0) - 420;
+                player.spinSpeed = (player.vx >= 0 ? 1 : -1) * 11;
+                player.squashX = 0.78;
+                player.squashY = 1.25;
+                playFlutterSound();
+                spawnBurst(player.x, player.y + 18, '#7dd3fc', 12, 0.8);
+                addFloatingText(player.x, player.y - 25, 'FLIP BOOST!', '#7dd3fc', 16);
+            }
+        }
+
+        function resetGame() {
+            resizeCanvas();
+            score = 0;
+            altitude = 0;
+            maxAltitude = 0;
+            combo = 1;
+            cameraY = 0;
+            screenShake = 0;
+
+            trampoline.width = Math.min(240, Math.max(180, width * 0.25));
+            trampoline.x = width / 2;
+            trampoline.y = groundY - 26;
+            trampoline.dip = 0;
+            trampoline.dipVelocity = 0;
+
+            player.x = width / 2;
+            player.y = trampoline.y - 130;
+            player.vx = 0;
+            player.vy = 0;
+            player.rotation = 0;
+            player.spinSpeed = 0;
+            player.squashX = 1;
+            player.squashY = 1;
+            player.canFlutter = true;
+            player.scarfPoints = Array.from({ length: 6 }, (_, i) => ({
+                x: player.x - i * 6,
+                y: player.y + 8
+            }));
+
+            collectibles = [];
+            floatingTexts = [];
+            particles = [];
+            initScenery();
+            highestGeneratedY = groundY - 240;
+            spawnSkyBand(highestGeneratedY, highestGeneratedY - 2600);
+            highestGeneratedY -= 2600;
+
+            updateHUD();
+        }
+
+        function startGame() {
+            ensureAudio();
+            resetGame();
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            // Initial gentle bounce boost
+            player.vy = -780;
+            trampoline.dip = 22;
+            playBounceSound(true, 1);
+            spawnBurst(trampoline.x, trampoline.y, '#fbbf24', 18, 1.1);
+        }
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        function updateHUD() {
+            scoreDisplay.textContent = Math.floor(score).toLocaleString();
+            highScoreDisplay.textContent = Math.floor(highScore).toLocaleString();
+            altitudeDisplay.textContent = Math.floor(altitude);
+
+            const pct = Math.min(100, Math.max(2, (altitude / 600) * 100));
+            altitudeBarFill.style.height = pct + '%';
+
+            if (combo > 1) {
+                comboBadge.classList.remove('hidden');
+                comboBadge.classList.add('flex');
+                comboDisplay.textContent = combo;
+            } else {
+                comboBadge.classList.add('hidden');
+                comboBadge.classList.remove('flex');
+            }
+        }
+
+        // --- Physics & Update Loop ---
+        function update(dt) {
+            frameTime += dt;
+
+            // Animate drifting clouds
+            for (const c of clouds) {
+                c.x += c.speed * dt;
+                if (c.x > width + 140) c.x = -140;
+                if (c.x < -140) c.x = width + 140;
+            }
+
+            // Spring animation for trampoline mat
+            const springK = 180;
+            const damping = 11;
+            const springForce = -springK * trampoline.dip - damping * trampoline.dipVelocity;
+            trampoline.dipVelocity += springForce * dt;
+            trampoline.dip += trampoline.dipVelocity * dt;
+
+            if (screenShake > 0) {
+                screenShake = Math.max(0, screenShake - dt * 28);
+            }
+
+            if (gameState !== 'PLAYING') {
+                // Idle gentle bob on start screen
+                player.x = width / 2 + Math.sin(frameTime * 1.5) * 35;
+                player.y = trampoline.y - 95 + Math.sin(frameTime * 3.2) * 28;
+                trampoline.x = player.x;
+                updateScarf(dt);
+                return;
+            }
+
+            // Generate higher sky items dynamically
+            while (highestGeneratedY > player.y - height * 2.2) {
+                spawnSkyBand(highestGeneratedY, highestGeneratedY - 2200);
+                highestGeneratedY -= 2200;
+            }
+
+            // Horizontal Steering (Relaxed, responsive easy-mode control)
+            const moveAccel = 1950;
+            const maxHorizSpeed = 460;
+            if (keys.left) {
+                player.vx -= moveAccel * dt;
+            } else if (keys.right) {
+                player.vx += moveAccel * dt;
+            } else if (pointerX !== null) {
+                const diff = pointerX - player.x;
+                player.vx += Math.max(-1, Math.min(1, diff / 75)) * moveAccel * dt;
+            } else {
+                player.vx *= Math.pow(0.04, dt);
+            }
+            player.vx = Math.max(-maxHorizSpeed, Math.min(maxHorizSpeed, player.vx));
+
+            // Gentle Easy-Mode Gravity
+            const gravity = 860;
+            player.vy += gravity * dt;
+            player.vy = Math.min(player.vy, 920); // Soft terminal velocity
+
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+
+            // Screen Horizontal Wrap / Soft Wall Bounce
+            const wallPad = player.radius + 8;
+            if (player.x < wallPad) {
+                player.x = wallPad;
+                player.vx = Math.abs(player.vx) * 0.6;
+            } else if (player.x > width - wallPad) {
+                player.x = width - wallPad;
+                player.vx = -Math.abs(player.vx) * 0.6;
+            }
+
+            // Rotation & Squash-Stretch Recovery
+            if (Math.abs(player.spinSpeed) > 0.1) {
+                player.rotation += player.spinSpeed * dt;
+                player.spinSpeed *= Math.pow(0.18, dt);
+            } else {
+                player.rotation = player.vx * 0.0007;
+            }
+            player.squashX += (1 - player.squashX) * Math.min(1, dt * 12);
+            player.squashY += (1 - player.squashY) * Math.min(1, dt * 12);
+
+            // Auto-Catch Trampoline Tracking:
+            // Smoothly tracks player so it always catches them, while letting player aim slightly left/right for the Sweet Spot
+            const halfTramp = trampoline.width / 2;
+            const minTrampX = halfTramp + 14;
+            const maxTrampX = width - halfTramp - 14;
+            const clampedPlayerX = Math.max(minTrampX, Math.min(maxTrampX, player.x));
+
+            if (player.vy > 0) {
+                // Descending: smoothly glide under player, locking in safely as player gets close
+                const distToGround = Math.max(0, trampoline.y - player.y);
+                const urgency = distToGround < 240 ? 18 : 6.5;
+                trampoline.x += (clampedPlayerX - trampoline.x) * Math.min(1, dt * urgency);
+            } else {
+                // Ascending: gently follow at a relaxed pace so player can maneuver for Sweet Spot on the way down
+                trampoline.x += (clampedPlayerX - trampoline.x) * Math.min(1, dt * 2.2);
+            }
+            trampoline.x = Math.max(minTrampX, Math.min(maxTrampX, trampoline.x));
+
+            // Trampoline Bounce & Guaranteed Safety Catch
+            const catchSurfaceY = trampoline.y - player.radius + 6;
+            if (player.vy > 0 && player.y >= catchSurfaceY) {
+                // Guarantee trampoline is centered under player if they somehow moved very fast
+                if (Math.abs(player.x - trampoline.x) > halfTramp - 10) {
+                    trampoline.x = clampedPlayerX;
+                }
+
+                player.y = catchSurfaceY;
+                player.canFlutter = true;
+                player.rotation = 0;
+                player.spinSpeed = 0;
+
+                const offsetFromCenter = Math.abs(player.x - trampoline.x);
+                const isSweetSpot = offsetFromCenter <= trampoline.sweetSpotWidth / 2;
+
+                if (isSweetSpot) {
+                    combo = Math.min(15, combo + 1);
+                    const bouncePower = Math.min(1380, 860 + combo * 42);
+                    player.vy = -bouncePower;
+                    trampoline.dip = 28;
+                    trampoline.dipVelocity = 140;
+                    screenShake = 6;
+                    const pts = 50 * combo;
+                    score += pts;
+                    playBounceSound(true, combo);
+                    spawnBurst(player.x, trampoline.y, '#fbbf24', 20, 1.2);
+                    addFloatingText(player.x, trampoline.y - 36, `SWEET SPOT! +${pts}`, '#fde047', 22);
+                } else {
+                    combo = 1;
+                    player.vy = -810;
+                    trampoline.dip = 19;
+                    trampoline.dipVelocity = 90;
+                    score += 15;
+                    playBounceSound(false, 1);
+                    spawnBurst(player.x, trampoline.y, '#38bdf8', 11, 0.85);
+                    addFloatingText(player.x, trampoline.y - 30, 'BOUNCE! +15', '#bae6fd', 17);
+                }
+
+                player.squashX = 1.38;
+                player.squashY = 0.66;
+            }
+
+            // Collectibles & Sky Props Interaction
+            for (const item of collectibles) {
+                if (item.collected) continue;
+                if (item.cooldown && item.cooldown > 0) item.cooldown -= dt;
+
+                const bobY = item.y + Math.sin(frameTime * 3 + item.bobOffset) * 6;
+                const dx = player.x - item.x;
+                const dy = player.y - bobY;
+                const dist = Math.hypot(dx, dy);
+
+                if (item.type === 'star' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    const pts = 30 * combo;
+                    score += pts;
+                    playStarSound();
+                    spawnBurst(item.x, bobY, '#fde047', 12, 0.9);
+                    addFloatingText(item.x, bobY - 12, `+${pts}`, '#fde047', 18);
+                } else if (item.type === 'balloon' && dist < player.radius + item.radius + 8) {
+                    item.collected = true;
+                    player.vy = Math.min(player.vy, -250) - 520;
+                    player.canFlutter = true;
+                    player.squashX = 0.8;
+                    player.squashY = 1.24;
+                    const pts = 60 * combo;
+                    score += pts;
+                    playBalloonSound();
+                    spawnBurst(item.x, bobY, item.color, 16, 1.1);
+                    addFloatingText(item.x, bobY - 15, `BALLOON LIFT! +${pts}`, '#f472b6', 19);
+                } else if (item.type === 'bounceCloud' && (!item.cooldown || item.cooldown <= 0)) {
+                    if (
+                        player.vy > 0 &&
+                        Math.abs(player.x - item.x) < item.width / 2 + player.radius * 0.7 &&
+                        Math.abs(player.y + player.radius - bobY) < 22
+                    ) {
+                        item.cooldown = 0.45;
+                        player.vy = -860;
+                        player.canFlutter = true;
+                        player.squashX = 1.3;
+                        player.squashY = 0.72;
+                        score += 25 * combo;
+                        playBounceSound(false, combo);
+                        spawnBurst(player.x, bobY, '#ffffff', 12, 0.8);
+                        addFloatingText(item.x, bobY - 22, 'CLOUD JUMP!', '#ffffff', 17);
+                    }
+                } else if (item.type === 'updraft') {
+                    if (
+                        Math.abs(player.x - item.x) < item.width / 2 + player.radius &&
+                        Math.abs(player.y - bobY) < item.height / 2
+                    ) {
+                        player.vy -= 1450 * dt;
+                        player.canFlutter = true;
+                        if (Math.random() < 0.35) {
+                            particles.push({
+                                x: item.x + (Math.random() - 0.5) * item.width,
+                                y: bobY + item.height / 2,
+                                vx: 0,
+                                vy: -240,
+                                size: 3,
+                                color: 'rgba(186, 230, 253, 0.8)',
+                                life: 0.5,
+                                maxLife: 0.5
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Cleanup far-below collectibles
+            if (collectibles.length > 140) {
+                collectibles = collectibles.filter((c) => !c.collected && c.y < player.y + height * 1.5);
+            }
+
+            // Altitude & High Score Tracking
+            altitude = Math.max(0, (trampoline.y - player.radius - player.y) / 14);
+            if (altitude > maxAltitude) {
+                const gain = altitude - maxAltitude;
+                score += gain * 0.8;
+                maxAltitude = altitude;
+            }
+            if (score > highScore) {
+                highScore = Math.floor(score);
+                setSavedBest(highScore);
+            }
+
+            // Smooth Camera Follow
+            const targetCameraY = Math.min(0, player.y - height * 0.44);
+            cameraY += (targetCameraY - cameraY) * Math.min(1, dt * 8);
+
+            // Update Scarf Physics
+            updateScarf(dt);
+
+            // Update Floating Texts
+            for (const ft of floatingTexts) {
+                ft.y += ft.vy * dt;
+                ft.life -= dt * 1.15;
+            }
+            floatingTexts = floatingTexts.filter((ft) => ft.life > 0);
+
+            // Update Particles
+            for (const p of particles) {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 260 * dt;
+                p.life -= dt;
+            }
+            particles = particles.filter((p) => p.life > 0);
+
+            updateHUD();
+        }
+
+        function updateScarf(dt) {
+            if (!player.scarfPoints.length) return;
+            player.scarfPoints[0].x = player.x - Math.sin(player.rotation) * 6;
+            player.scarfPoints[0].y = player.y + 8;
+            for (let i = 1; i < player.scarfPoints.length; i++) {
+                const prev = player.scarfPoints[i - 1];
+                const curr = player.scarfPoints[i];
+                const windX = -player.vx * 0.045 - 6 + Math.sin(frameTime * 8 + i) * 3;
+                const windY = -player.vy * 0.025 + 3;
+                curr.x += (prev.x + windX - curr.x) * Math.min(1, dt * 18);
+                curr.y += (prev.y + windY - curr.y) * Math.min(1, dt * 18);
+            }
+        }
+
+        // --- Rendering ---
+        function drawBackground() {
+            // Dynamic Sky Gradient based on altitude
+            const altFactor = Math.min(1, altitude / 550);
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+
+            if (altFactor < 0.5) {
+                const t = altFactor * 2;
+                skyGrad.addColorStop(0, lerpColor('#0284c7', '#1e1b4b', t));
+                skyGrad.addColorStop(0.55, lerpColor('#38bdf8', '#7c3aed', t));
+                skyGrad.addColorStop(1, lerpColor('#bae6fd', '#fb7185', t));
+            } else {
+                const t = (altFactor - 0.5) * 2;
+                skyGrad.addColorStop(0, lerpColor('#1e1b4b', '#020617', t));
+                skyGrad.addColorStop(0.55, lerpColor('#7c3aed', '#0f172a', t));
+                skyGrad.addColorStop(1, lerpColor('#fb7185', '#1e293b', t));
+            }
+
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Twinkling Stars at High Altitude
+            if (altFactor > 0.25) {
+                const starAlpha = Math.min(0.95, (altFactor - 0.25) * 1.3);
+                for (const s of backgroundStars) {
+                    const pulse = 0.55 + 0.45 * Math.sin(frameTime * 3 + s.twinkle);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha * pulse})`;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Warm Sun
+            const sunY = 110 - cameraY * 0.06;
+            if (sunY < height + 120) {
+                const sunGrad = ctx.createRadialGradient(width * 0.8, sunY, 10, width * 0.8, sunY, 85);
+                sunGrad.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+                sunGrad.addColorStop(0.45, 'rgba(253, 224, 71, 0.35)');
+                sunGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+                ctx.fillStyle = sunGrad;
+                ctx.beginPath();
+                ctx.arc(width * 0.8, sunY, 85, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Parallax Clouds
+            for (const c of clouds) {
+                const screenY = c.y - cameraY * c.layer;
+                if (screenY < -100 || screenY > height + 100) continue;
+                drawCloudShape(c.x, screenY, c.scale, c.layer === 0.35 ? 0.55 : 0.85);
+            }
+
+            // Distant Mountains & Rolling Hills (visible near ground)
+            const hillBaseY = groundY - cameraY;
+            if (hillBaseY < height + 300) {
+                // Far Mountains
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath();
+                ctx.moveTo(0, hillBaseY);
+                ctx.lineTo(0, hillBaseY - 170);
+                ctx.lineTo(width * 0.22, hillBaseY - 290);
+                ctx.lineTo(width * 0.48, hillBaseY - 155);
+                ctx.lineTo(width * 0.76, hillBaseY - 320);
+                ctx.lineTo(width, hillBaseY - 190);
+                ctx.lineTo(width, hillBaseY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Snow caps
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.moveTo(width * 0.22, hillBaseY - 290);
+                ctx.lineTo(width * 0.16, hillBaseY - 245);
+                ctx.lineTo(width * 0.22, hillBaseY - 255);
+                ctx.lineTo(width * 0.28, hillBaseY - 240);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(width * 0.76, hillBaseY - 320);
+                ctx.lineTo(width * 0.69, hillBaseY - 265);
+                ctx.lineTo(width * 0.76, hillBaseY - 275);
+                ctx.lineTo(width * 0.83, hillBaseY - 260);
+                ctx.closePath();
+                ctx.fill();
+
+                // Rolling Green Hills
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.moveTo(0, hillBaseY);
+                ctx.quadraticCurveTo(width * 0.28, hillBaseY - 115, width * 0.58, hillBaseY - 35);
+                ctx.quadraticCurveTo(width * 0.82, hillBaseY - 95, width, hillBaseY - 30);
+                ctx.lineTo(width, hillBaseY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Foreground Meadow Ground
+                const groundGrad = ctx.createLinearGradient(0, hillBaseY, 0, hillBaseY + 140);
+                groundGrad.addColorStop(0, '#16a34a');
+                groundGrad.addColorStop(0.25, '#15803d');
+                groundGrad.addColorStop(1, '#14532d');
+                ctx.fillStyle = groundGrad;
+                ctx.fillRect(0, hillBaseY, width, height - hillBaseY + 120);
+
+                // Grass Top Trim
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(0, hillBaseY, width, 8);
+            }
+        }
+
+        function drawCloudShape(x, y, scale, alpha) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(-32, 8, 24, 0, Math.PI * 2);
+            ctx.arc(0, -4, 34, 0, Math.PI * 2);
+            ctx.arc(34, 6, 26, 0, Math.PI * 2);
+            ctx.arc(10, 14, 24, 0, Math.PI * 2);
+            ctx.arc(-14, 14, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawTrampoline() {
+            const tx = trampoline.x;
+            const ty = trampoline.y;
+            const halfW = trampoline.width / 2;
+            const legBottom = groundY;
+
+            // Ground Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+            ctx.beginPath();
+            ctx.ellipse(tx, legBottom + 3, halfW * 1.05, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Metallic U-Frame Legs
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 7;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Left Leg
+            ctx.beginPath();
+            ctx.moveTo(tx - halfW + 18, ty + 8);
+            ctx.lineTo(tx - halfW + 14, legBottom);
+            ctx.lineTo(tx - halfW + 52, legBottom);
+            ctx.lineTo(tx - halfW + 48, ty + 8);
+            ctx.stroke();
+
+            // Right Leg
+            ctx.beginPath();
+            ctx.moveTo(tx + halfW - 18, ty + 8);
+            ctx.lineTo(tx + halfW - 14, legBottom);
+            ctx.lineTo(tx + halfW - 52, legBottom);
+            ctx.lineTo(tx + halfW - 48, ty + 8);
+            ctx.stroke();
+
+            // Outer Steel Rim Posts
+            ctx.fillStyle = '#475569';
+            ctx.beginPath();
+            ctx.roundRect(tx - halfW - 6, ty - 4, 16, 16, 6);
+            ctx.roundRect(tx + halfW - 10, ty - 4, 16, 16, 6);
+            ctx.fill();
+
+            // Coiled Tension Springs on Left & Right
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2.5;
+            drawSpring(tx - halfW + 10, ty + 4, tx - halfW + 26, ty + 4 + trampoline.dip * 0.25);
+            drawSpring(tx + halfW - 10, ty + 4, tx + halfW - 26, ty + 4 + trampoline.dip * 0.25);
+
+            // Elastic Trampoline Mat (curves down dynamically with trampoline.dip)
+            const matLeft = tx - halfW + 24;
+            const matRight = tx + halfW - 24;
+            const dipY = ty + 4 + trampoline.dip;
+
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(matLeft, ty + 4);
+            ctx.quadraticCurveTo(tx, dipY, matRight, ty + 4);
+            ctx.stroke();
+
+            // Bright Blue Rim Pad Accent
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(matLeft, ty + 4);
+            ctx.quadraticCurveTo(tx, dipY, matRight, ty + 4);
+            ctx.stroke();
+
+            // Golden Center Sweet Spot Target Zone
+            const sweetHalf = trampoline.sweetSpotWidth / 2;
+            const sweetDipY = ty + 4 + trampoline.dip * 0.52;
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(tx - sweetHalf, sweetDipY - trampoline.dip * 0.08);
+            ctx.quadraticCurveTo(tx, dipY, tx + sweetHalf, sweetDipY - trampoline.dip * 0.08);
+            ctx.stroke();
+        }
+
+        function drawSpring(x1, y1, x2, y2) {
+            const coils = 5;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            for (let i = 1; i <= coils; i++) {
+                const t = i / (coils + 1);
+                const x = x1 + (x2 - x1) * t;
+                const y = y1 + (y2 - y1) * t + (i % 2 === 0 ? -3.5 : 3.5);
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function drawCollectibles() {
+            for (const item of collectibles) {
+                if (item.collected) continue;
+                const bobY = item.y + Math.sin(frameTime * 3 + item.bobOffset) * 6;
+                if (bobY - cameraY < -160 || bobY - cameraY > height + 160) continue;
+
+                if (item.type === 'star') {
+                    drawStar(item.x, bobY, 5, item.radius, item.radius * 0.48);
+                } else if (item.type === 'balloon') {
+                    // Balloon String
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(item.x, bobY + item.radius);
+                    ctx.quadraticCurveTo(item.x + 6, bobY + item.radius + 14, item.x - 3, bobY + item.radius + 26);
+                    ctx.stroke();
+
+                    // Balloon Body
+                    ctx.fillStyle = item.color;
+                    ctx.beginPath();
+                    ctx.ellipse(item.x, bobY, item.radius * 0.86, item.radius, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Shine Highlight
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                    ctx.beginPath();
+                    ctx.ellipse(item.x - 6, bobY - 7, 4.5, 8, -0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (item.type === 'bounceCloud') {
+                    drawCloudShape(item.x, bobY, 0.85, 0.95);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.font = 'bold 12px Fredoka, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('▲', item.x, bobY + 6);
+                } else if (item.type === 'updraft') {
+                    const grad = ctx.createLinearGradient(0, bobY + item.height / 2, 0, bobY - item.height / 2);
+                    grad.addColorStop(0, 'rgba(125, 211, 252, 0.04)');
+                    grad.addColorStop(0.5, 'rgba(125, 211, 252, 0.22)');
+                    grad.addColorStop(1, 'rgba(125, 211, 252, 0.04)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(item.x - item.width / 2, bobY - item.height / 2, item.width, item.height, 24);
+                    ctx.fill();
+
+                    // Animated wind streaks
+                    ctx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+                    ctx.lineWidth = 2;
+                    for (let i = -1; i <= 1; i++) {
+                        const offset = ((frameTime * 140 + i * 45) % item.height) - item.height / 2;
+                        ctx.beginPath();
+                        ctx.moveTo(item.x + i * 16, bobY - offset);
+                        ctx.lineTo(item.x + i * 16, bobY - offset - 22);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function drawStar(cx, cy, spikes, outerRadius, innerRadius) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(Math.sin(frameTime * 2.5) * 0.2);
+
+            // Glow
+            ctx.fillStyle = 'rgba(253, 224, 71, 0.28)';
+            ctx.beginPath();
+            ctx.arc(0, 0, outerRadius * 1.35, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            let rot = (Math.PI / 2) * 3;
+            const step = Math.PI / spikes;
+            ctx.moveTo(0, -outerRadius);
+            for (let i = 0; i < spikes; i++) {
+                ctx.lineTo(Math.cos(rot) * outerRadius, Math.sin(rot) * outerRadius);
+                rot += step;
+                ctx.lineTo(Math.cos(rot) * innerRadius, Math.sin(rot) * innerRadius);
+                rot += step;
+            }
+            ctx.closePath();
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawPlayer() {
+            // Flowing Scarf Trail
+            if (player.scarfPoints.length > 1) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(player.scarfPoints[0].x, player.scarfPoints[0].y);
+                for (let i = 1; i < player.scarfPoints.length; i++) {
+                    ctx.lineTo(player.scarfPoints[i].x, player.scarfPoints[i].y);
+                }
+                ctx.stroke();
+            }
+
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.rotation);
+            ctx.scale(player.squashX, player.squashY);
+
+            // Articulated Arms (raise up when soaring, spread when falling)
+            const armAngle = player.vy < 0 ? -0.95 : 0.45;
+            ctx.strokeStyle = '#fed7aa';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+
+            // Left Arm
+            ctx.beginPath();
+            ctx.moveTo(-14, 2);
+            ctx.lineTo(-26, Math.sin(armAngle) * 18);
+            ctx.stroke();
+
+            // Right Arm
+            ctx.beginPath();
+            ctx.moveTo(14, 2);
+            ctx.lineTo(26, Math.sin(armAngle) * 18);
+            ctx.stroke();
+
+            // Legs & Red Sneakers
+            const legSpread = player.vy < 0 ? 7 : 11;
+            ctx.strokeStyle = '#1e3a8a';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(-7, 14);
+            ctx.lineTo(-legSpread, 25);
+            ctx.moveTo(7, 14);
+            ctx.lineTo(legSpread, 25);
+            ctx.stroke();
+
+            // Sneakers
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.roundRect(-legSpread - 6, 22, 12, 7, 3);
+            ctx.roundRect(legSpread - 6, 22, 12, 7, 3);
+            ctx.fill();
+
+            // Torso Shirt
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.roundRect(-14, -2, 28, 20, 9);
+            ctx.fill();
+
+            // Scarf Collar
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.roundRect(-13, -4, 26, 7, 3.5);
+            ctx.fill();
+
+            // Head
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(0, -15, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair Tufts
+            ctx.fillStyle = '#78350f';
+            ctx.beginPath();
+            ctx.arc(-6, -26, 6, 0, Math.PI * 2);
+            ctx.arc(2, -28, 7, 0, Math.PI * 2);
+            ctx.arc(9, -25, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Expressive Eyes
+            const lookX = Math.max(-2.5, Math.min(2.5, player.vx * 0.01));
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(-5 + lookX, -16, 2.3, 0, Math.PI * 2);
+            ctx.arc(5 + lookX, -16, 2.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cheerful Smile
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            if (player.vy < -250) {
+                ctx.arc(lookX, -11, 4, 0, Math.PI);
+            } else {
+                ctx.arc(lookX, -12, 3.5, 0.15 * Math.PI, 0.85 * Math.PI);
+            }
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawParticlesAndText() {
+            for (const p of particles) {
+                ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            for (const ft of floatingTexts) {
+                ctx.globalAlpha = Math.max(0, ft.life);
+                ctx.font = `bold ${ft.size}px Fredoka, sans-serif`;
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(ft.text, ft.x + 1.5, ft.y + 1.5);
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function lerpColor(hexA, hexB, t) {
+            const a = parseInt(hexA.slice(1), 16);
+            const b = parseInt(hexB.slice(1), 16);
+            const rA = (a >> 16) & 255, gA = (a >> 8) & 255, bA = a & 255;
+            const rB = (b >> 16) & 255, gB = (b >> 8) & 255, bB = b & 255;
+            const r = Math.round(rA + (rB - rA) * t);
+            const g = Math.round(gA + (gB - gA) * t);
+            const bl = Math.round(bA + (bB - bA) * t);
+            return `rgb(${r}, ${g}, ${bl})`;
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+            drawBackground();
+
+            ctx.save();
+            const shakeX = screenShake > 0 ? (Math.random() - 0.5) * screenShake : 0;
+            const shakeY = screenShake > 0 ? (Math.random() - 0.5) * screenShake : 0;
+            ctx.translate(shakeX, -cameraY + shakeY);
+
+            drawCollectibles();
+            drawTrampoline();
+            drawPlayer();
+            drawParticlesAndText();
+
+            ctx.restore();
+        }
+
+        // --- Main Animation Loop ---
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            resetGame();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
