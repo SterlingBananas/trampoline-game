@@ -188,6 +188,68 @@
             } catch (e) {}
         }
 
+        // Persistent Shop & Upgrades
+        let totalLifetimeStars = getSavedStars();
+        let upgrades = {
+            height: getSavedUpgrade('height', 1),
+            width: getSavedUpgrade('width', 1),
+            sweet: getSavedUpgrade('sweet', 1),
+            magnet: getSavedUpgrade('magnet', 1)
+        };
+
+        function getSavedStars() {
+            try {
+                return parseInt(localStorage.getItem('trampoline_total_stars') || '0', 10) || 0;
+            } catch (e) { return 0; }
+        }
+        function setSavedStars(val) {
+            try { localStorage.setItem('trampoline_total_stars', String(val)); } catch (e) {}
+        }
+        function getSavedUpgrade(key, def) {
+            try {
+                return parseInt(localStorage.getItem('trampoline_up_' + key) || String(def), 10) || def;
+            } catch (e) { return def; }
+        }
+        function setSavedUpgrade(key, val) {
+            try { localStorage.setItem('trampoline_up_' + key, String(val)); } catch (e) {}
+        }
+
+        function getUpgradeCost(type) {
+            const lvl = upgrades[type];
+            if (type === 'height') return lvl * 80;
+            if (type === 'width') return lvl * 60;
+            if (type === 'sweet') return lvl * 100;
+            if (type === 'magnet') return lvl * 120;
+            return 100;
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopStarsDisplay').textContent = Math.floor(totalLifetimeStars);
+            document.getElementById('lvlHeight').textContent = upgrades.height;
+            document.getElementById('costHeight').textContent = getUpgradeCost('height') + ' ⭐';
+            document.getElementById('lvlWidth').textContent = upgrades.width;
+            document.getElementById('costWidth').textContent = getUpgradeCost('width') + ' ⭐';
+            document.getElementById('lvlSweet').textContent = upgrades.sweet;
+            document.getElementById('costSweet').textContent = getUpgradeCost('sweet') + ' ⭐';
+            document.getElementById('lvlMagnet').textContent = upgrades.magnet;
+            document.getElementById('costMagnet').textContent = getUpgradeCost('magnet') + ' ⭐';
+        }
+
+        window.buyUpgrade = function(type) {
+            const cost = getUpgradeCost(type);
+            if (totalLifetimeStars >= cost) {
+                totalLifetimeStars -= cost;
+                upgrades[type]++;
+                setSavedStars(totalLifetimeStars);
+                setSavedUpgrade(type, upgrades[type]);
+                updateShopUI();
+                playStarSound();
+            } else {
+                playTone(180, 120, 0.2, 'sawtooth', 0.1);
+            }
+        };
+
+
         // --- Input State & Listeners ---
         const keys = { left: false, right: false };
         let pointerX = null;
